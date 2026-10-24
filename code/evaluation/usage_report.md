@@ -1,6 +1,6 @@
 # Final runtime usage
 
-Requests: 518. Elapsed wall time: 6.133 seconds. Observations indexed: 2900. Fatal extraction/processing failures: 0 (a failure aborts execution). OCR layout caveats: 11. Evidence-empty authorized cases: 4.
+Requests: 518. Elapsed wall time: 4.490 seconds. Observations indexed: 2900. Fatal extraction/processing failures: 0 (a failure aborts execution). OCR layout caveats: 11. Evidence-empty authorized cases: 4.
 
 Runtime providers/models: none. Model calls: 0. Input tokens: 0. Output tokens: 0. Total tokens: 0. Tokens/request: 0. Total inference cost: $0. Cost/request: $0.
 
