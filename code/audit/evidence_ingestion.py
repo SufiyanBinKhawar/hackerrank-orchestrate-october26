@@ -87,7 +87,7 @@ class EvidenceStore:
             elif path.suffix in ('.pdf', '.png'): self.document(path, meta)
             else: raise ValueError(f'Unsupported evidence format: {path}')
 
-    def add(self, data, meta, context=None, location='', replica='logical', state=None):
+    def add(self, data, meta, context=None, location='', replica='primary', state=None):
         context = context or {}
         resource = data.get('resource_id')
         if not resource: return
@@ -187,7 +187,7 @@ class EvidenceStore:
                 system = merged.get('system', merged.get('service', ''))
                 if system == 'support_replica': system = 'support_platform'
                 if system == 'profile_service': system = 'account_service'
-                self.add({**merged, 'recorded_at': time, 'record_type': category, 'system': system}, meta, location=f'line {number}; trace {trace}', state=state)
+                self.add({**merged, 'recorded_at': time, 'record_type': category, 'system': system}, meta, location=f'line {number}; trace {trace}', replica='support_replica' if merged.get('service') == 'support_replica' else 'primary', state=state)
 
     def text(self, text, meta):
         for number, line in enumerate(text.splitlines(), 1):

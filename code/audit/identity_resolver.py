@@ -1,4 +1,5 @@
 from collections import defaultdict
+import re
 from .models import normalize, timestamp
 
 
@@ -29,6 +30,9 @@ class IdentityResolver:
 
     def values(self, uid, cutoff):
         row = self.current[uid]
+        if timestamp(row['updated_at']) > cutoff and not any(timestamp(r['event_time']) > cutoff for r in self.history[uid]):
+            # No historical evidence can reconstruct this future-only snapshot.
+            return {uid}
         values = {uid}
         for field in ('email', 'phone', 'email_hash'):
             changes = sorted((r for r in self.history[uid] if r['field_name'] == field), key=lambda r: r['event_time'])
@@ -40,4 +44,4 @@ class IdentityResolver:
             for change in changes:
                 if timestamp(change['event_time']) <= cutoff:
                     values.update(normalize(change[k]) for k in ('old_value', 'new_value') if change[k])
-        return values
+        return values | {re.sub(r'[^\d+]', '', v) for v in values if v.startswith('+')}

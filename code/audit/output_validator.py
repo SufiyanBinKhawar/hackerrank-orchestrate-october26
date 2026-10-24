@@ -1,4 +1,5 @@
 import json
+import re
 from .models import timestamp
 from .remediation_planner import OPERATIONS, sort_key
 
@@ -31,6 +32,7 @@ def validate(rows, requests, store, graph):
             cite = step['phase'] == 'FINDING' or status == 'COMPLETE'
             if bool(evidence) != cite: raise ValueError('Incorrect evidence citation behavior')
             if evidence:
+                if not re.fullmatch(r'(?:evidence|activity|audit)_\d+', evidence): raise ValueError('Invalid evidence ID syntax')
                 if evidence not in store.manifest: raise ValueError('Unknown evidence ID')
                 if timestamp(store.manifest[evidence]['captured_at']) > cutoff: raise ValueError('Future evidence citation')
             resource = step['resource_id']
@@ -38,4 +40,19 @@ def validate(rows, requests, store, graph):
             if not valid: raise ValueError(f'Unsupported resource reference: {resource}')
             if cite and not any(o.evidence == evidence for o in valid) and not any(s.evidence == evidence and s.system == step['system_id'] and timestamp(s.captured_at) <= cutoff for s in store.scopes):
                 raise ValueError('Citation does not support resource')
+            if cite:
+                observations = [o for o in valid if o.evidence == evidence]
+                scope_absence = step['state'] == 'ABSENT' and any(s.evidence == evidence and s.system == step['system_id'] and resource not in s.resources for s in store.scopes)
+                if not any(o.state == step['state'] for o in observations) and not scope_absence:
+                    raise ValueError('Cited evidence does not establish asserted state')
+        if status == 'INCOMPLETE':
+            required = {'REPORT_REMAINING_RECORD': ('DELETE_RECORD', 'VERIFY_RECORD_ABSENT'), 'REPORT_EXPOSED_PII': (None, None), 'REPORT_ACTIVE_DATA_FLOW': ('DISABLE_DATA_FLOW', 'VERIFY_DATA_FLOW_DISABLED'), 'REPORT_RESTORE_RISK': ('BLOCK_RESTORE', 'VERIFY_RESTORE_BLOCKED')}
+            for step in steps:
+                if step['phase'] != 'FINDING': continue
+                remediation, verification = required[step['operation']]
+                target = (step['system_id'], step['resource_id'])
+                if remediation:
+                    if (remediation, *target) not in seen or (verification, *target) not in seen: raise ValueError('Finding missing matching remediation or verification')
+                elif not any((r, *target) in seen and (v, *target) in seen for r,v in [('REDACT_RECORD','VERIFY_RECORD_REDACTED'),('ANONYMIZE_RECORD','VERIFY_RECORD_ANONYMIZED')]):
+                    raise ValueError('Exposed PII missing treatment and verification')
         if status == 'INCOMPLETE' and {s['phase'] for s in steps} != {'FINDING', 'REMEDIATION', 'VERIFICATION'}: raise ValueError('Incomplete plan missing phase')

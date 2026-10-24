@@ -1,5 +1,9 @@
 # HackerRank Orchestrate - October 2026
 
+## Implemented solution
+
+The deterministic auditor is implemented in `code/`. See [setup, architecture, commands, and limitations](code/README.md), [measured evaluation](code/evaluation/evaluation_report.md), and [runtime usage](code/evaluation/usage_report.md). Run `python code/main.py` to generate predictions or `python code/main.py --evaluate` to evaluate the public sample. The original challenge instructions follow.
+
 ## Ghost Data Still Exists
 
 Build an AI agent that audits whether a user's personal data was actually deleted.

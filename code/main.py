@@ -41,9 +41,11 @@ def main():
     logging.info('Processed %d requests, %d observations in %.3f seconds', len(rows), len(auditor.store.observations), elapsed)
     if args.evaluate:
         from evaluation.main import evaluate
-        evaluate(rows, read_csv(ROOT / 'dataset/sample_output.csv'), ROOT / 'code/evaluation/evaluation_report.md')
+        evaluate(rows, read_csv(ROOT / 'dataset/sample_output.csv'), ROOT / 'code/evaluation/evaluation_report.md', auditor, requests)
     if not args.sample and not args.evaluate:
-        (ROOT / 'code/evaluation/usage_report.md').write_text(f'# Final runtime usage\n\nRequests: {len(rows)}. Elapsed wall time: {elapsed:.3f} seconds. Observations indexed: {len(auditor.store.observations)}.\n\nRuntime providers/models: none. Model calls: 0. Input tokens: 0. Output tokens: 0. Total tokens: 0. Tokens/request: 0. Total inference cost: $0. Cost/request: $0.\n\nDevelopment used codex_vscode with gpt-6-astra; development token/cost totals are not available and are not included in runtime metrics.\n', encoding='utf8')
+        uncertain = [case for case, trace in auditor.traces.items() if trace.get('uncertainty')]
+        (ROOT / 'code/evaluation/usage_report.md').write_text(f'# Final runtime usage\n\nRequests: {len(rows)}. Elapsed wall time: {elapsed:.3f} seconds. Observations indexed: {len(auditor.store.observations)}. Fatal extraction/processing failures: 0 (a failure aborts execution). OCR layout caveats: {len(auditor.store.diagnostics)}. Evidence-empty authorized cases: {len(uncertain)}.\n\nRuntime providers/models: none. Model calls: 0. Input tokens: 0. Output tokens: 0. Total tokens: 0. Tokens/request: 0. Total inference cost: $0. Cost/request: $0.\n\nDevelopment used codex_vscode with gpt-6-astra; development token/cost totals are not available and are not included in runtime metrics.\n\nThese figures describe the final full run with cached OCR. PDF/SQL/JSON/log parsing runs once per invocation. The inference cost excludes local compute and development assistance.\n', encoding='utf8')
+        (ROOT / 'code/evaluation/uncertainty_report.md').write_text('# Evidence gaps in the full run\n\nThe contract has no UNKNOWN status. When no attributable pre-cutoff observation remains, the engine uses COMPLETE with no assertions as a forced label; it does not infer absence or claim proof. This is a material limitation.\n\nAffected cases: ' + ', '.join(uncertain) + '\n\nOCR caveats:\n' + '\n'.join('- '+d for d in auditor.store.diagnostics) + '\n', encoding='utf8')
     print(output)
 
 

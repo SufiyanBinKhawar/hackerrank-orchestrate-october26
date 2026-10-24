@@ -28,7 +28,11 @@ RESOURCE = re.compile(r'\b(?:account|analytics|search|support|export|data_flow|b
 def identifiers(data):
     """Exact tokens only; names and resource-number similarities are never identities."""
     if isinstance(data, dict):
-        return set().union(*(identifiers(v) for k, v in data.items() if k not in {'resource_id', 'source_resource_id'}))
+        values = set().union(*(identifiers(v) for k, v in data.items() if k not in {'resource_id', 'source_resource_id'}))
+        for k, v in data.items():
+            if k in ('phone', 'owner_phone', 'requester_phone') and v and str(v).startswith('+'):
+                values.add(re.sub(r'[^\d+]', '', str(v)))
+        return values
     if isinstance(data, list):
         return set().union(*(identifiers(v) for v in data)) if data else set()
     return {normalize(m.group()) for m in TOKEN.finditer(str(data))}
@@ -45,7 +49,7 @@ class Observation:
     evidence: str
     location: str
     identifiers: set = field(default_factory=set)
-    replica: str = 'logical'
+    replica: str = 'primary'
     attributes: dict = field(default_factory=dict)
 
     def available(self, cutoff):
